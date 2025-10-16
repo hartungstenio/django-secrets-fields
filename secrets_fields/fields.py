@@ -4,17 +4,19 @@ Django encrypted model field that fetches the value from AWS Secrets Manager
 
 import json
 import warnings
-import django.db.models
-from .util import get_backend
-from secrets_fields.exceptions import DecryptionException
 from dataclasses import dataclass
-from typing import Any, TypeVar, Type, cast, Generic
+from typing import Any, Generic, Type, TypeVar, cast
+
+import django.db.models
 from django.conf import settings
 from django.db.models import Model
-from .types import JSON
-from .widgets import JSONWidget
-from django.forms import Field, ChoiceField
+from django.forms import ChoiceField, Field
 
+from secrets_fields.exceptions import DecryptionException
+
+from .types import JSON
+from .util import get_backend
+from .widgets import JSONWidget
 
 TTL = 30
 
@@ -38,15 +40,13 @@ class SecretBase(Generic[T]):
         plaintext: T | None = None,
         ciphertext: str | None = None,
     ):
-        self.ciphertext = ciphertext
-        self._plaintext = plaintext
         self._backend = get_backend(backend)
-        if not self.ciphertext and self._plaintext:
-            self.ciphertext = self._backend.encrypt(
-                self.prepare_ciphertext(self._plaintext)
-            )
+        if not ciphertext and plaintext:
+            ciphertext = self._backend.encrypt(self.prepare_ciphertext(plaintext))
             # prepend version
-            self.ciphertext = f"v1|{self.ciphertext}"
+            ciphertext = f"v1|{ciphertext}"
+
+        self.ciphertext = ciphertext
 
     def prepare_ciphertext(self, value: T) -> str:
         """Prepare the plaintext for encryption"""
