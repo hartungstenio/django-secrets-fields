@@ -1,6 +1,10 @@
+from collections.abc import Iterable, Sequence
+from typing import Any
+
+from django.apps import AppConfig, apps
 from django.conf import settings
 from django.core.checks import Error
-from django.apps import apps
+
 from .fields import SecretField
 
 
@@ -13,7 +17,11 @@ def _has_secret_text_field() -> bool:
     return False
 
 
-def check_secret_field_settings(app_configs: dict, **kwargs: dict) -> list[Error]:
+def check_secret_field_settings(
+    app_configs: Sequence[AppConfig] | None,
+    databases: Sequence[str] | None = None,
+    **kwargs: Any,
+) -> Iterable[Error]:
     errors = []
 
     if _has_secret_text_field() and not hasattr(settings, "DJANGO_SECRETS_FIELDS"):

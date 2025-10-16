@@ -1,11 +1,13 @@
-import pytest
-from django.core.checks import Error
-from django.apps.registry import apps
 from unittest.mock import patch
+
+import pytest
+from django.apps.registry import apps
+from django.conf import settings
+from django.core.checks import Error
+from django.db import models
+
 from secrets_fields.checks import check_secret_field_settings
 from secrets_fields.fields import SecretTextField
-from django.db import models
-from django.conf import settings
 
 
 class MockModel(models.Model):
