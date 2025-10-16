@@ -5,7 +5,7 @@ Django encrypted model field that fetches the value from AWS Secrets Manager
 import json
 import warnings
 from dataclasses import dataclass
-from typing import Any, Generic, Type, TypeVar, cast
+from typing import Any, Generic, Type, TypeVar, cast, overload
 
 import django.db.models
 from django.conf import settings
@@ -33,6 +33,14 @@ T = TypeVar("T")
 
 
 class SecretBase(Generic[T]):
+    @overload
+    def __init__(self, *, backend: str = "default", plaintext: T):
+        pass
+
+    @overload
+    def __init__(self, *, backend: str = "default", ciphertext: str):
+        pass
+
     def __init__(
         self,
         *,
@@ -40,8 +48,12 @@ class SecretBase(Generic[T]):
         plaintext: T | None = None,
         ciphertext: str | None = None,
     ):
+        if ciphertext and (plaintext is not None):
+            msg: str = "Only plaintext or ciphertext should be informed."
+            raise ValueError(msg)
+
         self._backend = get_backend(backend)
-        if not ciphertext and plaintext:
+        if plaintext:
             ciphertext = self._backend.encrypt(self.prepare_ciphertext(plaintext))
             # prepend version
             ciphertext = f"v1|{ciphertext}"

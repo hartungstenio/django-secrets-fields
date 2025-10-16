@@ -1,19 +1,41 @@
 import json
+from unittest.mock import patch
+
 import pytest
 from cryptography import fernet
-from moto import mock_aws
-from unittest.mock import patch
-from testapp.configs import models
-from mixer.backend.django import mixer
-from django.test import override_settings
 from django.db import connection
-from secrets_fields.exceptions import DecryptionException
+from django.test import override_settings
+from mixer.backend.django import mixer
+from moto import mock_aws
 
+from secrets_fields.exceptions import DecryptionException
+from secrets_fields.fields import SecretBase
 from secrets_fields.management.commands.migrate_encrypted import (
     Command as MigrateEncryptedCommand,
 )
+from testapp.configs import models
 
 pytestmark = pytest.mark.django_db
+
+
+def test_secret_type_constructor() -> None:
+    class SecretType(SecretBase[str]):
+        pass
+
+    instance = SecretType(backend="static", plaintext="supersecret")
+    assert instance.get() == "supersecret"
+
+    crypter = fernet.Fernet(b"5_SgmNvlc9aNe1qePC2VdkJHE9fEUYN4xLVUoVZ6IbM=")
+    encryped = crypter.encrypt(b"supersecret").decode("utf-8")
+    instance = SecretType(backend="static", ciphertext=f"v1|{encryped}")
+    assert instance.get() == "supersecret"
+
+    with pytest.raises(ValueError):
+        SecretType(
+            backend="static",
+            ciphertext=f"v1|{encryped}",
+            plaintext="supersecret",
+        )
 
 
 def test_model_text_field() -> None:
